@@ -45,7 +45,6 @@ export default class SystemBookmarkComponent {
       const html = this.result as string
       try {
         const result = parseBookmark(html)
-        console.log(JSON.stringify(result))
         if (!Array.isArray(result)) {
           that.notification.error(
             $t('_errorBookTip'),
