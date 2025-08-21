@@ -37,14 +37,17 @@ export default class SystemBookmarkComponent {
   onBookChange(e: any) {
     const that = this
     const { files } = e.target
+    console.log(files.length)
     if (files.length <= 0) return
     const file = files[0]
     const fileReader = new FileReader()
     fileReader.readAsText(file)
     fileReader.onload = function () {
       const html = this.result as string
+      console.log(html)
       try {
         const result = parseBookmark(html)
+        console.log(result)
         if (!Array.isArray(result)) {
           that.notification.error(
             $t('_errorBookTip'),
