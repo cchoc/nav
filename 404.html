@@ -46,50 +46,395 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>直接显示的音乐小组件</title>
-    <!-- 引入Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入Font Awesome图标 -->
-    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    
-    <!-- 配置Tailwind自定义颜色 -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#3B82F6',
-                        music: '#F43F5E' // 音乐组件专属颜色
-                    }
-                }
-            }
+    <title>网站音乐播放器</title>
+    <style>
+        /* 全局样式重置（避免浏览器默认样式差异） */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-    </script>
-    
-    <!-- 自定义工具类 -->
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .sidebar-container {
-                @apply fixed right-4 top-[33.333%] transform -translate-y-1/2 z-50;
+
+        /* 音乐播放器容器 - 固定在右侧上三分之一处 */
+        .music-player {
+            position: fixed;
+            /* 右侧定位：距离右边1rem */
+            right: 1rem;
+            /* 顶部定位：计算屏幕高度的1/3（减去播放器自身高度的一半，实现垂直居中对齐1/3线） */
+            top: calc(100vh / 3 - 40px);
+            /* 播放器尺寸与样式 */
+            width: 280px;
+            height: 80px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 9999; /* 确保播放器在最上层，不被其他内容遮挡 */
+            transition: box-shadow 0.3s ease;
+        }
+
+        /* 鼠标悬浮时增强阴影效果 */
+        .music-player:hover {
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 播放控制按钮样式 */
+        .player-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .control-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            background-color: #f5f5f5;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background-color: #e8e8e8;
+        }
+
+        .play-btn {
+            background-color: #2c3e50;
+            color: white;
+        }
+
+        .play-btn:hover {
+            background-color: #34495e;
+        }
+
+        /* 音乐信息与进度条容器 */
+        .music-info {
+            flex: 1;
+            margin: 0 12px;
+        }
+
+        .music-title {
+            font-size: 14px;
+            color: #333333;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis; /* 标题过长时显示省略号 */
+        }
+
+        /* 进度条样式 */
+        .progress-container {
+            width: 100%;
+            height: 4px;
+            background-color: #e0e0e0;
+            border-radius: 2px;
+            cursor: pointer;
+        }
+
+        .progress-bar {
+            width: 0%; /* 初始进度为0 */
+            height: 100%;
+            background-color: #2c3e50;
+            border-radius: 2px;
+            transition: width 0.1s linear;
+        }
+
+        /* 音量控制样式 */
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .volume-btn {
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            color: #666666;
+        }
+
+        .volume-slider {
+            width: 60px;
+            height: 4px;
+            background-color: #e0e0e0;
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none; /* 清除默认滑块样式 */
+        }
+
+        /* 自定义滑块轨道（Chrome/Safari） */
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #2c3e50;
+            cursor: pointer;
+        }
+
+        /* 自定义滑块轨道（Firefox） */
+        .volume-slider::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #2c3e50;
+            cursor: pointer;
+            border: none;
+        }
+
+        /* 响应式调整：屏幕宽度小于768px时优化显示 */
+        @media (max-width: 768px) {
+            .music-player {
+                width: 240px;
+                height: 70px;
+                padding: 0 12px;
+            }
+
+            .control-btn {
+                width: 36px;
+                height: 36px;
+            }
+
+            .volume-slider {
+                width: 50px;
             }
         }
     </style>
-<style>@layer properties;@layer theme,base,components,utilities;@layer theme{:root{--font-sans:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";--font-mono:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;--color-red-400:oklch(70.4% .191 22.216);--color-red-500:oklch(63.7% .237 25.331);--color-orange-400:oklch(75% .183 55.934);--color-green-600:oklch(62.7% .194 149.214);--color-gray-50:oklch(98.5% .002 247.839);--color-gray-500:oklch(55.1% .027 264.364);--color-gray-600:oklch(44.6% .03 256.802);--color-gray-700:oklch(37.3% .034 259.733);--color-gray-800:oklch(27.8% .033 256.848);--color-neutral-400:oklch(70.8% 0 0);--color-black:#000;--color-white:#fff;--spacing:.25rem;--container-6xl:72rem;--text-xs:.75rem;--text-xs--line-height:calc(1 / .75);--text-base:1rem;--text-base--line-height:1.5 ;--text-3xl:1.875rem;--text-3xl--line-height:1.2 ;--font-weight-bold:700;--radius-lg:.5rem;--ease-in-out:cubic-bezier(.4, 0, .2, 1);--default-transition-duration:.15s;--default-transition-timing-function:cubic-bezier(.4, 0, .2, 1);--default-font-family:var(--font-sans);--default-mono-font-family:var(--font-mono)}}@layer base{*,:after,:before{box-sizing:border-box;margin:0;padding:0;border:0 solid}html{line-height:1.5;-webkit-text-size-adjust:100%;tab-size:4;font-family:var(--default-font-family, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji");font-feature-settings:var(--default-font-feature-settings, normal);font-variation-settings:var(--default-font-variation-settings, normal);-webkit-tap-highlight-color:transparent}h1{font-size:inherit;font-weight:inherit}iframe{display:block;vertical-align:middle}}@layer utilities{.container{width:100%}@media (width >= 40rem){.container{max-width:40rem}}@media (width >= 48rem){.container{max-width:48rem}}@media (width >= 64rem){.container{max-width:64rem}}@media (width >= 80rem){.container{max-width:80rem}}@media (width >= 96rem){.container{max-width:96rem}}.mx-auto{margin-inline:auto}.mb-4{margin-bottom:calc(var(--spacing) * 4)}.mb-6{margin-bottom:calc(var(--spacing) * 6)}.min-h-screen{min-height:100vh}.max-w-6xl{max-width:var(--container-6xl)}.rounded-lg{border-radius:var(--radius-lg)}.bg-gray-50{background-color:var(--color-gray-50)}.px-4{padding-inline:calc(var(--spacing) * 4)}.py-8{padding-block:calc(var(--spacing) * 8)}.text-3xl{font-size:var(--text-3xl);line-height:var(--tw-leading, var(--text-3xl--line-height))}.font-bold{--tw-font-weight:var(--font-weight-bold);font-weight:var(--font-weight-bold)}.text-gray-700{color:var(--color-gray-700)}.text-gray-800{color:var(--color-gray-800)}.shadow-lg{--tw-shadow:0 10px 15px -3px var(--tw-shadow-color, rgb(0 0 0 / .1)), 0 4px 6px -4px var(--tw-shadow-color, rgb(0 0 0 / .1));box-shadow:var(--tw-inset-shadow),var(--tw-inset-ring-shadow),var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow)}}@-webkit-keyframes nprogress-spinner{0%{-webkit-transform:rotate(0deg)}to{-webkit-transform:rotate(360deg)}}html,body{width:100%;height:100%}*,*:before,*:after{box-sizing:border-box}html{font-family:sans-serif;line-height:1.15;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;-ms-overflow-style:scrollbar;-webkit-tap-highlight-color:rgba(0,0,0,0)}@-ms-viewport{width:device-width}body{margin:0;color:#000000d9;font-size:14px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,"Apple Color Emoji","Segoe UI Emoji",Segoe UI Symbol,"Noto Color Emoji";font-variant:tabular-nums;line-height:1.5715;background-color:#fff;font-feature-settings:"tnum"}h1{margin-top:0;margin-bottom:.5em;color:#000000d9;font-weight:500}p{margin-top:0;margin-bottom:1em}html{--antd-wave-shadow-color:#1890ff;--scroll-bar:0}@font-face{font-family:text;src:url("./media/Amiko-Regular-VY3IM2XM.ttf") format("truetype"),url(data:font/woff;base64,d09GRk9UVE8AAAVkAAsAAAAAB1wAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAABDRkYgAAABCAAAAi4AAAKbH/pWDkZGVE0AAAM4AAAAGgAAABxt0civR0RFRgAAA1QAAAAcAAAAIAAyAARPUy8yAAADcAAAAFIAAABgUBj/rmNtYXAAAAPEAAAAUAAAAWIiC0SwaGVhZAAABBQAAAAuAAAANgABMftoaGVhAAAERAAAABwAAAAkA+UCA2htdHgAAARgAAAADgAAAA4ESgBKbWF4cAAABHAAAAAGAAAABgAFUABuYW1lAAAEeAAAANwAAAFuBSeBwnBvc3QAAAVUAAAAEAAAACAAAwABeJw9ks9vEkEUx2cpWyeUoFYgNkHi2Wt7N3rVm3cTs3UVLC4LxIWEQvi1P3i7O1tYLJDAmlgKGEhQrsajf0j7J3jYTXrQWUrMJG+++b55n5e8NwwKBhHDMLv5kxT3ATEBxKBn3qOAl9zxHgb1MAPhHQgHkyF08Gr/L8B/Eb6zWnmCJ7AJVLubQOheArXvJ1A4EXi6j4I+Zg9F0QFKvsnlBCmXeve+sFEnb/nCptdtQ4QYhVFRAT1HrF8UQK/RL/SbmUbclsvGVFXRZKDHUE38cc4qpkbAAsuwiImvro+ufcfaOIQ6szlrmjRJDaKZKnbjN3GWKIbiIzRFUfCffuxxKOL+3LDlDVvx2TdxN84qZEsnhNBa6pgm2dAsnzbLsETdsmRFxUeHV4e+I2/ptN8TyqV8T3Dt29t7EYOuajVIw2y1Wy3M86w0zg/Fz2IvawmQAUHOVrPVfLkoScVynsqsTG0MGUs4z55nh3mnOJa+li+rl9WpPIcFfDubDeaDC+fLBdYN3QADzLauGfj4B6sZmq6CCpqmtSvF0qlUl2qf5AJIUCSlTqlb7lUG+LRfGzZGzZEyBgccMu6MuqPecNDvD4Y9Kjtj4gD+DsvKVMTcMdtqtZtmkzQstQvYje7Syep0PDSAhSOeHYXYWThEF//A/0YvYV1fSQtpKU5STtrhbQ444OtpKSWJIg3pOg8cBs7maTY1EZf07aq+hjWs7IWzdCYTGhb2CtZ47x+Uhx28AAB4nGNgYGBkAIJz765vANHnCyvqYTQAWnkHswAAeJxjYGRgYOADYgkGEGBiYARCFjAG8RgABHYAN3icY2BmYmCcwMDKwMHow5jGwMDgDqW/MkgytDAwMDGwcjKAQQMDAyOQUmCAgoA01xQGB4ZExUmMD/4/YNBjvP3/NgNEDQPjbbBKBQZGADfLDgsAAHicY2BgYGaAYBkGRgYQiAHyGMF8FgYHIM3DwMHABGQzMCQqKClOUJz0/z9YHRLv/+L7D+8V3cuHmgAHjGwM6ELUByxUMIOZCmbgAAA5LQ8XeJxjYGRgYABiO68w73h+m68M3EwMIHC+sKIeTqsyqDLeZrwN5HIwgKUB/aYJUgAAeJxjYGRgYLzNwMCgx8QAAkA2IwMqYAIAMGIB7QIAAAACAAAlACUAJQAlAAAAAFAAAAUAAHicbY49asNAEIU/2ZJDfkiRIvXapUFCEqpcptABUrg3ZhEiQoKVfY9UqVLlGDlADpAT5e16IUWysMz3hjfzBrjjjQT/EjKpCy+4YhN5yZoxcirPe+SMWz4jr6S+5UzSa3VuwpTnBfc8RF7yxDZyKs9r5IxHPiKv1P9iZqDnyAvMQ39UecbScVb/gJO03Xk4CFom3XYK1clhMdQUlKo7/d9NF13RkIdfy+MV7TSe2sl11tRFaXYmJKpWTd7kdVnJ8veevZKc+n3I93t9Jnvr5n4aTVWU/0z9AI2qMkV4nGNgZkAGjAxoAAAAjgAF) format("woff");font-display:swap}:root{--componentHeight:155px}html{-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%}body{min-height:100vh;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;-webkit-overflow-scrolling:touch;font-size:14px}iframe{border:none;max-width:100%}i{font-style:normal}@property --tw-translate-x{syntax:"*";inherits:false;initial-value:0;}@property --tw-translate-y{syntax:"*";inherits:false;initial-value:0;}@property --tw-translate-z{syntax:"*";inherits:false;initial-value:0;}@property --tw-rotate-x{syntax:"*";inherits:false;}@property --tw-rotate-y{syntax:"*";inherits:false;}@property --tw-rotate-z{syntax:"*";inherits:false;}@property --tw-skew-x{syntax:"*";inherits:false;}@property --tw-skew-y{syntax:"*";inherits:false;}@property --tw-border-style{syntax:"*";inherits:false;initial-value:solid;}@property --tw-font-weight{syntax:"*";inherits:false;}@property --tw-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000;}@property --tw-shadow-color{syntax:"*";inherits:false;}@property --tw-shadow-alpha{syntax:"<percentage>";inherits:false;initial-value:100%;}@property --tw-inset-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000;}@property --tw-inset-shadow-color{syntax:"*";inherits:false;}@property --tw-inset-shadow-alpha{syntax:"<percentage>";inherits:false;initial-value:100%;}@property --tw-ring-color{syntax:"*";inherits:false;}@property --tw-ring-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000;}@property --tw-inset-ring-color{syntax:"*";inherits:false;}@property --tw-inset-ring-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000;}@property --tw-ring-inset{syntax:"*";inherits:false;}@property --tw-ring-offset-width{syntax:"<length>";inherits:false;initial-value:0px;}@property --tw-ring-offset-color{syntax:"*";inherits:false;initial-value:#fff;}@property --tw-ring-offset-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000;}@property --tw-outline-style{syntax:"*";inherits:false;initial-value:solid;}@property --tw-blur{syntax:"*";inherits:false;}@property --tw-brightness{syntax:"*";inherits:false;}@property --tw-contrast{syntax:"*";inherits:false;}@property --tw-grayscale{syntax:"*";inherits:false;}@property --tw-hue-rotate{syntax:"*";inherits:false;}@property --tw-invert{syntax:"*";inherits:false;}@property --tw-opacity{syntax:"*";inherits:false;}@property --tw-saturate{syntax:"*";inherits:false;}@property --tw-sepia{syntax:"*";inherits:false;}@property --tw-drop-shadow{syntax:"*";inherits:false;}@property --tw-drop-shadow-color{syntax:"*";inherits:false;}@property --tw-drop-shadow-alpha{syntax:"<percentage>";inherits:false;initial-value:100%;}@property --tw-drop-shadow-size{syntax:"*";inherits:false;}@property --tw-ease{syntax:"*";inherits:false;}@layer properties{@supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))){*,:before,:after{--tw-translate-x:0;--tw-translate-y:0;--tw-translate-z:0;--tw-rotate-x:initial;--tw-rotate-y:initial;--tw-rotate-z:initial;--tw-skew-x:initial;--tw-skew-y:initial;--tw-border-style:solid;--tw-font-weight:initial;--tw-shadow:0 0 #0000;--tw-shadow-color:initial;--tw-shadow-alpha:100%;--tw-inset-shadow:0 0 #0000;--tw-inset-shadow-color:initial;--tw-inset-shadow-alpha:100%;--tw-ring-color:initial;--tw-ring-shadow:0 0 #0000;--tw-inset-ring-color:initial;--tw-inset-ring-shadow:0 0 #0000;--tw-ring-inset:initial;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-offset-shadow:0 0 #0000;--tw-outline-style:solid;--tw-blur:initial;--tw-brightness:initial;--tw-contrast:initial;--tw-grayscale:initial;--tw-hue-rotate:initial;--tw-invert:initial;--tw-opacity:initial;--tw-saturate:initial;--tw-sepia:initial;--tw-drop-shadow:initial;--tw-drop-shadow-color:initial;--tw-drop-shadow-alpha:100%;--tw-drop-shadow-size:initial;--tw-ease:initial}}}</style><link rel="stylesheet" href="styles-CEEBQZIE.css" media="print" onload="this.media='all'"><noscript><link rel="stylesheet" href="styles-CEEBQZIE.css"></noscript></head>
-<body class="bg-gray-50 min-h-screen">
-    <!-- 主内容区域 -->
-    <main class="container mx-auto px-4 py-8 max-w-6xl">
-        <h1 class="text-3xl font-bold text-gray-800 mb-6">网页主内容区</h1>
-        <p class="text-gray-700 mb-4">右侧1/3高度处已直接显示音乐小组件。</p>
-    </main>
+<style>@layer properties;@layer theme,base,components,utilities;@layer theme{:root{--font-sans:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";--font-mono:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;--color-red-400:oklch(70.4% .191 22.216);--color-red-500:oklch(63.7% .237 25.331);--color-orange-400:oklch(75% .183 55.934);--color-green-600:oklch(62.7% .194 149.214);--color-gray-500:oklch(55.1% .027 264.364);--color-gray-600:oklch(44.6% .03 256.802);--color-neutral-400:oklch(70.8% 0 0);--color-black:#000;--color-white:#fff;--spacing:.25rem;--text-xs:.75rem;--text-xs--line-height:calc(1 / .75);--text-base:1rem;--text-base--line-height:1.5 ;--font-weight-bold:700;--ease-in-out:cubic-bezier(.4, 0, .2, 1);--default-transition-duration:.15s;--default-transition-timing-function:cubic-bezier(.4, 0, .2, 1);--default-font-family:var(--font-sans);--default-mono-font-family:var(--font-mono)}}@layer base{*,:after,:before{box-sizing:border-box;margin:0;padding:0;border:0 solid}html{line-height:1.5;-webkit-text-size-adjust:100%;tab-size:4;font-family:var(--default-font-family, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji");font-feature-settings:var(--default-font-feature-settings, normal);font-variation-settings:var(--default-font-variation-settings, normal);-webkit-tap-highlight-color:transparent}svg{display:block;vertical-align:middle}button,input{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;border-radius:0;background-color:transparent;opacity:1}button,input:where([type=button],[type=reset],[type=submit]){appearance:button}}@layer utilities{}@-webkit-keyframes nprogress-spinner{0%{-webkit-transform:rotate(0deg)}to{-webkit-transform:rotate(360deg)}}html,body{width:100%;height:100%}input::-ms-clear,input::-ms-reveal{display:none}*,*:before,*:after{box-sizing:border-box}html{font-family:sans-serif;line-height:1.15;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;-ms-overflow-style:scrollbar;-webkit-tap-highlight-color:rgba(0,0,0,0)}@-ms-viewport{width:device-width}body{margin:0;color:#000000d9;font-size:14px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,"Apple Color Emoji","Segoe UI Emoji",Segoe UI Symbol,"Noto Color Emoji";font-variant:tabular-nums;line-height:1.5715;background-color:#fff;font-feature-settings:"tnum"}p{margin-top:0;margin-bottom:1em}button,input:not([type=range]){touch-action:manipulation}input,button{margin:0;color:inherit;font-size:inherit;font-family:inherit;line-height:inherit}button,input{overflow:visible}button{text-transform:none}button{-webkit-appearance:button}button::-moz-focus-inner{padding:0;border-style:none}html{--antd-wave-shadow-color:#1890ff;--scroll-bar:0}:root{--componentHeight:155px}html{-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%}body{min-height:100vh;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;-webkit-overflow-scrolling:touch;font-size:14px}button,input{font-size:100%}button{-webkit-appearance:none;outline:none;border:1px solid #e1e1e1}i{font-style:normal}@property --tw-rotate-x{syntax:"*";inherits:false;}@property --tw-rotate-y{syntax:"*";inherits:false;}@property --tw-rotate-z{syntax:"*";inherits:false;}@property --tw-skew-x{syntax:"*";inherits:false;}@property --tw-skew-y{syntax:"*";inherits:false;}@property --tw-border-style{syntax:"*";inherits:false;initial-value:solid;}@property --tw-font-weight{syntax:"*";inherits:false;}@property --tw-outline-style{syntax:"*";inherits:false;initial-value:solid;}@property --tw-blur{syntax:"*";inherits:false;}@property --tw-brightness{syntax:"*";inherits:false;}@property --tw-contrast{syntax:"*";inherits:false;}@property --tw-grayscale{syntax:"*";inherits:false;}@property --tw-hue-rotate{syntax:"*";inherits:false;}@property --tw-invert{syntax:"*";inherits:false;}@property --tw-opacity{syntax:"*";inherits:false;}@property --tw-saturate{syntax:"*";inherits:false;}@property --tw-sepia{syntax:"*";inherits:false;}@property --tw-drop-shadow{syntax:"*";inherits:false;}@property --tw-drop-shadow-color{syntax:"*";inherits:false;}@property --tw-drop-shadow-alpha{syntax:"<percentage>";inherits:false;initial-value:100%;}@property --tw-drop-shadow-size{syntax:"*";inherits:false;}@property --tw-ease{syntax:"*";inherits:false;}@layer properties{@supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))){*,:before,:after{--tw-rotate-x:initial;--tw-rotate-y:initial;--tw-rotate-z:initial;--tw-skew-x:initial;--tw-skew-y:initial;--tw-border-style:solid;--tw-font-weight:initial;--tw-outline-style:solid;--tw-blur:initial;--tw-brightness:initial;--tw-contrast:initial;--tw-grayscale:initial;--tw-hue-rotate:initial;--tw-invert:initial;--tw-opacity:initial;--tw-saturate:initial;--tw-sepia:initial;--tw-drop-shadow:initial;--tw-drop-shadow-color:initial;--tw-drop-shadow-alpha:100%;--tw-drop-shadow-size:initial;--tw-ease:initial}}}</style><link rel="stylesheet" href="styles-IPICB4KW.css" media="print" onload="this.media='all'"><noscript><link rel="stylesheet" href="styles-IPICB4KW.css"></noscript></head>
+<body>
+    <!-- 音乐播放器核心容器 -->
+    <div class="music-player">
+        <!-- 播放/暂停、上一曲/下一曲控制 -->
+        <div class="player-controls">
+            <button class="control-btn prev-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 20L9 12L19 4V20Z"/>
+                    <path d="M5 19V5"/>
+                </svg>
+            </button>
+            <button class="control-btn play-btn" id="playBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M8 5V19L19 12L8 5Z"/>
+                </svg>
+            </button>
+            <button class="control-btn next-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M5 4L15 12L5 20V4Z"/>
+                    <path d="M19 5V19"/>
+                </svg>
+            </button>
+        </div>
 
-    <!-- 右侧小组件容器 - 直接显示音乐组件 -->
-    <div class="sidebar-container">
-        <!-- 直接嵌入音乐组件 -->
-        <iframe src="https://www.noisework.cn/widgets/music-3/" width="300" height="400" frameborder="0" class="rounded-lg shadow-lg" title="音乐播放器组件"></iframe>
+        <!-- 音乐标题与进度条 -->
+        <div class="music-info">
+            <div class="music-title" id="musicTitle">未选择音乐</div>
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+
+        <!-- 音量控制 -->
+        <div class="volume-control">
+            <button class="volume-btn" id="volumeBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 5L6 9H2V15H6L11 19V5Z"/>
+                    <path d="M15.54 8.46C16.4774 9.39764 17.004 10.6631 17.004 11.96C17.004 13.2569 16.4774 14.5224 15.54 15.46"/>
+                    <path d="M19.07 4.93C20.9447 6.80528 22 9.34884 22 12C22 14.6512 20.9447 17.1947 19.07 19.07"/>
+                </svg>
+            </button>
+            <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.01" value="0.7">
+        </div>
+
+        <!-- 本地音乐选择按钮（隐藏input，通过按钮触发） -->
+        <input type="file" id="musicFile" accept="audio/*" style="display: none;">
+        <button class="control-btn" id="selectMusicBtn" title="选择本地音乐">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5V19"/>
+                <path d="M5 12H19"/>
+            </svg>
+        </button>
     </div>
-<link rel="modulepreload" href="chunk-TQN4BXGO.js"><link rel="modulepreload" href="chunk-OMCMVUDI.js"><link rel="modulepreload" href="chunk-CGYFUL5E.js"><link rel="modulepreload" href="chunk-JPBYJY2E.js"><link rel="modulepreload" href="chunk-YKKLWUTB.js"><link rel="modulepreload" href="chunk-V6T4FUJO.js"><link rel="modulepreload" href="chunk-CPVPPNMD.js"><link rel="modulepreload" href="chunk-WLKJBYYG.js"><link rel="modulepreload" href="chunk-UF5ZYB2Y.js"><link rel="modulepreload" href="chunk-5BYKGQDC.js"><script src="polyfills-HGDOEU5L.js" type="module"></script><script src="main-WKQO6QFJ.js" type="module"></script></body>
-</html>
-    <!-- nav.headerContent-end -->
+
+    <!-- 音乐播放核心逻辑 -->
+    <script>
+        // 获取DOM元素
+        const playBtn = document.getElementById('playBtn');
+        const prevBtn = document.querySelector('.prev-btn');
+        const nextBtn = document.querySelector('.next-btn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const volumeBtn = document.getElementById('volumeBtn');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const selectMusicBtn = document.getElementById('selectMusicBtn');
+        const musicFile = document.getElementById('musicFile');
+        const musicTitle = document.getElementById('musicTitle');
+
+        // 初始化音频对象
+        let audio = new Audio();
+        // 存储本地选择的音乐列表
+        let musicList = [];
+        // 当前播放索引
+        let currentIndex = 0;
+        // 是否静音状态
+        let isMuted = false;
+
+        // 1. 选择本地音乐逻辑
+        selectMusicBtn.addEventListener('click', () => {
+            musicFile.click(); // 触发文件选择框
+        });
+
+        // 选择音乐文件后处理
+        musicFile.addEventListener('change', (e) => {
+            const files = e.target.files;
+            if (files.length === 0) return;
+
+            // 将选择的音乐添加到列表
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                // 过滤非音频文件（双重保险，因accept已限制）
+                if (file.type.startsWith('audio/')) {
+                    musicList.push(file);
+                }
+            }
+
+            // 如果是第一次选择音乐，自动加载第一首
+            if (musicList.length === files.length) {
+                currentIndex = 0;
+                loadMusic(musicList[currentIndex]);
+            }
+
+            // 重置文件选择框（允许重复选择同一文件）
+            musicFile.value = '';
+        });
+
+        // 2. 加载音乐函数
+        function loadMusic(musicFile) {
+            // 创建本地音乐的临时URL
+            const musicUrl = URL.createObjectURL(musicFile);
+            // 设置音频源
+            audio.src = musicUrl;
+            // 更新音乐标题（去除文件扩展名）
+            const fileName = musicFile.name.replace(/\.[^/.]+$/, "");
+            musicTitle.textContent = fileName;
+            // 加载音频（准备播放）
+            audio.load();
+            // 自动播放（可选，可注释改为手动点击播放）
+            audio.play();
+            // 更新播放按钮图标
+            updatePlayBtnIcon();
+        }
+
+        // 3. 播放/暂停控制
+        playBtn.addEventListener('click', () => {
+            if (musicList.length === 0) {
+                // 未选择音乐时提示
+                alert('请先选择本地音乐文件');
+                return;
+            }
+
+            if (audio.paused) {
+                audio.play();
+            } else {
+                audio.pause();
+            }
+            updatePlayBtnIcon();
+        });
+
+        // 更新播放按钮图标（播放/暂停切换）
+        function updatePlayBtnIcon() {
+            const svg = playBtn.querySelector('svg');
+            if (audio.paused) {
+                // 暂停状态 → 显示播放图标
+                svg.innerHTML = '<path d="M8 5V19L19 12L8 5Z"></path>';
+            } else {
+                // 播放状态 → 显示暂停图标
+                svg.innerHTML = '<path d="M6 4H10V20H6V4Z"></path><path d="M14 4H18V20H14V4Z"></path>';
+            }
+        }
+
+        // 4. 进度条控制
+        // 点击进度条跳转播放位置
+        progressContainer.addEventListener('click', (e) => {
+            const progressWidth = progressContainer.clientWidth;
+            const clickX = e.offsetX;
+            // 计算跳转比例
+            const jumpRatio = clickX / progressWidth;
+            // 设置音频播放位置
+            audio.currentTime = jumpRatio * audio.duration;
+        });
+
+        // 实时更新进度条
+        audio.addEventListener('timeupdate', () => {
+            const progressRatio = audio.currentTime / audio.duration;
+            progressBar.style.width = `${progressRatio * 100}%`;
+        });
+
+        // 5. 音量控制
+        // 音量滑块调整
+        volumeSlider.addEventListener('input', () => {
+            audio.volume = volumeSlider.value;
+            // 如果之前是静音，调整音量后取消静音
+            if (isMuted) {
+                isMuted = false;
+                updateVolumeBtnIcon();
+            }
+        });
+
+        // 静音/取消静音切换
+        volumeBtn.addEventListener('click', () => {
+            isMuted = !isMuted;
+            audio.muted = isMuted;
+            updateVolumeBtnIcon();
+        });
+
+        // 更新音量按钮图标（静音/正常切换）
+        function updateVolumeBtnIcon() {
+            const svg = volumeBtn.querySelector('svg');
+            if (isMuted || audio.volume === 0) {
+                // 静音状态 → 显示静音图标
+                svg.innerHTML = '<path d="M16.5 12C16.5 10.2386 15.5614 8.63604 14 7.93701L16.5 3H7L10.5 7.93701C9.00585 8.69107 8.0043 10.3016 8.0043 12C8.0043 13.6984 9.00585 15.3089 10.5 16.063L7 21H16.5L13 16.063C14.5614 15.364 15.5 13.7614 15.5 12H16.5ZM19.07 4.93C20.9447 6.80528 22 9.34884 22 12C22 14.6512 20.9447 17.1947 19.07 19.07"></path>';
+            } else if (audio.volume < 0.5) {
+                // 低音量 → 显示低音量图标
+                svg.innerHTML = '<path d="M18.5 10.5L17.5 11.5L14 8V16L17.5 12.5L18.5 13.5L22 10L18.5 6.5L17.5 7.5L18.5 8.5V10.5ZM11 5L6 9H2V15H6L11 19V5Z"></path>';
+            } else {
+                // 正常音量 → 显示正常音量图标
+                svg.innerHTML = '<path d="M11 5L6 9H2V15H6L11 19V5Z"></path><path d="M15.54 8.46C16.4774 9.39764 17.004 10.6631 17.004 11.96C17.004 13.2569 16.4774 14.5224 15.54 15.46"></path><path d="M19.07 4.93C20.9447 6.80528 22 9.34884 22 12C22 14.6512 20.9447 17.1947 19.07 19.07"></path>';
+            }
+        }
+
+        // 6. 上一曲/下一曲控制
+        prevBtn.addEventListener('click', () => {
+            if (musicList.length === 0) return;
+            currentIndex = (currentIndex - 1 + musicList.length) % musicList.length;
+            loadMusic(musicList[currentIndex]);
+        });
+
+        nextBtn.addEventListener('click', () => {
+            if (musicList.length === 0) return;
+            currentIndex = (currentIndex + 1) % musicList.length;
+            loadMusic(musicList[currentIndex]);
+        });
+
+        // 7. 音频播放结束自动下一曲
+        audio.addEventListener('ended', () => {
+            currentIndex = (currentIndex + 1) % musicList.length;
+            loadMusic(musicList[currentIndex]);
+        });
+
+        // 8. 释放临时URL（避免内存泄漏）
+        window.addEventListener('beforeunload', () => {
+            URL.revokeObjectURL(audio.src);
+        });
+    </script>
+<link rel="modulepreload" href="chunk-MTCCEC4A.js"><link rel="modulepreload" href="chunk-AA43FBP5.js"><link rel="modulepreload" href="chunk-QSQILVC7.js"><link rel="modulepreload" href="chunk-LT5XJCCQ.js"><link rel="modulepreload" href="chunk-IVLSLV3C.js"><link rel="modulepreload" href="chunk-5J2EOIL2.js"><link rel="modulepreload" href="chunk-U2KF4PE4.js"><link rel="modulepreload" href="chunk-V4DXNN65.js"><link rel="modulepreload" href="chunk-KWA47BSW.js"><link rel="modulepreload" href="chunk-Z4PXZORD.js"><script src="polyfills-HGDOEU5L.js" type="module"></script><script src="main-QPVVWZPR.js" type="module"></script></body>
+</html><!-- nav.headerContent-end -->
     <!-- nav.const-start -->
     <!-- nav.const-end -->
     <!-- nav.pwa-start --><script>window.__PWA_ENABLE__=false;</script><!-- nav.pwa-end -->
@@ -284,7 +629,7 @@
 </html><!-- nav.loading-end -->
     </app-xiejiahe>
     <!-- nav.seo-start -->
-<div data-url="https://github.com/xjh22222228/nav" data-server-time="1756174175002" data-a="x.i.e-jiahe" data-date="2025-08-26 10:09:35" id="META-NAV" style="z-index:-1;position:fixed;top:-10000vh;left:-10000vh;">
+<div data-url="https://github.com/xjh22222228/nav" data-server-time="1756174491240" data-a="x.i.e-jiahe" data-date="2025-08-26 10:14:51" id="META-NAV" style="z-index:-1;position:fixed;top:-10000vh;left:-10000vh;">
 <div>我的主页</div><div>资源详情</div><div>百度一下，你就知道</div><p>全球领先的中文搜索引擎、致力于让网民更便捷地获取信息，找到所求。百度超过千亿的中文网页数据库，可以瞬间找到相关的搜索结果。</p><div>华语流行乐坛歌手精选1264首经典歌曲无损音质合集</div><p>华语流行乐坛歌手精选1264首经典歌曲无损音质合集。</p><div>U盘车载专用 3068 首 24G</div><p>U盘车载专用 3068 首 24G。</p><div>电影/电视剧网站</div><p>电影 /电视剧网站，追剧神器！</p><div>家里家外（79集）王道铁&孙艺燃</div><p>家里家外（79集）王道铁&孙艺燃。</p><div>奥特曼动画13部合集</div><p>奥特曼动画13部合集！</p><div>11部4K原盘收藏级纪录片【205GB】</div><p>11部4K原盘收藏级纪录片【205GB】。</p><div>13部神级纪录片</div><p>13部神级纪录片。</p><div>爱情公寓 5季全 4K +番外篇+大电影</div><p>爱情公寓 5季全 4K +番外篇+大电影。</p><div>南来北往</div><p>电视剧南来北往全集。</p><div>破产姐妹</div><p>破产姐妹全季-全集。</p><div>86版西游记4K</div><p>86版西游记4K-全集。</p><div>成龙电影（合集）</div><p>成龙电影（合集）</p><div>第97届奥斯卡金像奖《阿诺拉》磁力链接</div><p>第97届奥斯卡金像奖《阿诺拉》磁力链接：！</p><div>2024年度全世界电影榜单</div><p>2024年度全世界电影榜单！</p><div>40天学会粤语</div><p>40天学会粤语 从零基础到进阶开口说粤语！（广州话+香港话），夸克网盘资源下载。</p><div>100多道菜，实用教学让你从小白变大厨</div><p>100多道菜，实用教学让你从小白变大厨，夸克网盘资源下载。</p><div>美食实体店配方专题，价值上万！</div><p>美食实体店配方专题 价值上万，包括各种流行的菜式制作配方，夸克网盘资源下载。</p><div>20节零基础学美声系统课程</div><p>徐长信的《20 节零基础学美声系统课程》是一门专为初学者设计的声乐课程，旨在帮助学习者从零开始系统地学习美声唱法。</p><div>镜头口播课程</div><p>镜头口播课程2.0，三大掌握核心方法，内容情绪化等一系列口播教学，眼神训练、表达力、表现力、拍摄技巧、手势训练、提词器以及即兴表达，夸克网盘资源下载。</p><div>韩国语精讲：0基础到精通教程</div><p>韩国语精讲：0基础到精通教程。</p><div>吉他系统教程 小白到大神</div><p>“吉他系统教程从小白到大神”是一门全面的吉他学习课程。从基础的音乐理论和吉他基本功开始，逐步引导学员掌握和演奏不同风格的吉他曲目。课程内容包括和弦、技巧、音阶、音乐理论等，通过系统的讲解和实践演练，帮助学员从吉他初学者逐渐成长为技艺娴熟的吉他大神。</p><div>美甲详细基础课，从基础到考证</div><p>美甲详细基础课，从基础到考证，包含基础美申工具详细介绍、基础甲片修申形、电片练习座实操系列、模特手指练习实操系列、真人实操基础系列、真人实操重难点进阶精讲练习、考证系列课程资源等等，夸克网盘资源下载。</p><div>钢琴成人零基础速成视频课程</div><p>这个零基础速成视频适合没有任何音乐经验的学生。通过简单易懂的讲解和练习，您将学会基本的音阶、和弦和曲目演奏。从理论到实践，这个课程将帮助您在短时间内掌握钢琴技巧并享受演奏的乐趣。无需担心，只需按照视频指导学习即可！</p><div>《米卡·实占塔罗初阶课》</div><p>《米卡·实占塔罗初阶课》课程内容涵盖了塔罗牌的基本知识和实占技巧。课程从基础理论到实战操作，内容系统且全面：
 1. 塔罗牌基础知识：包括塔罗牌的历史、起源、流程、戒律、牌灵、牌的组成和重要参考元素（大牌和小阿卡纳牌），以及与占星对应的属性。
 2. 小阿卡纳与元素解读：对数字牌、元素牌、色彩牌及画面牌的详细解析。
