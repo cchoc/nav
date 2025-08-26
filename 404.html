@@ -58,11 +58,8 @@
         /* 音乐播放器容器 - 固定在右侧上三分之一处 */
         .music-player {
             position: fixed;
-            /* 右侧定位：距离右边1rem */
             right: 1rem;
-            /* 顶部定位：计算屏幕高度的1/3（减去播放器自身高度的一半，实现垂直居中对齐1/3线） */
             top: calc(100vh / 3 - 40px);
-            /* 播放器尺寸与样式 */
             width: 280px;
             height: 80px;
             background-color: #ffffff;
@@ -72,11 +69,10 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            z-index: 9999; /* 确保播放器在最上层，不被其他内容遮挡 */
+            z-index: 9999;
             transition: box-shadow 0.3s ease;
         }
 
-        /* 鼠标悬浮时增强阴影效果 */
         .music-player:hover {
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
         }
@@ -99,6 +95,9 @@
             align-items: center;
             justify-content: center;
             transition: background-color 0.3s ease;
+            /* 修复按钮点击区域问题 */
+            overflow: visible;
+            outline: none;
         }
 
         .control-btn:hover {
@@ -126,7 +125,7 @@
             margin-bottom: 4px;
             white-space: nowrap;
             overflow: hidden;
-            text-overflow: ellipsis; /* 标题过长时显示省略号 */
+            text-overflow: ellipsis;
         }
 
         /* 进度条样式 */
@@ -139,7 +138,7 @@
         }
 
         .progress-bar {
-            width: 0%; /* 初始进度为0 */
+            width: 0%;
             height: 100%;
             background-color: #2c3e50;
             border-radius: 2px;
@@ -158,6 +157,7 @@
             background: transparent;
             cursor: pointer;
             color: #666666;
+            outline: none;
         }
 
         .volume-slider {
@@ -166,10 +166,9 @@
             background-color: #e0e0e0;
             border-radius: 2px;
             outline: none;
-            -webkit-appearance: none; /* 清除默认滑块样式 */
+            -webkit-appearance: none;
         }
 
-        /* 自定义滑块轨道（Chrome/Safari） */
         .volume-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
             width: 12px;
@@ -179,7 +178,6 @@
             cursor: pointer;
         }
 
-        /* 自定义滑块轨道（Firefox） */
         .volume-slider::-moz-range-thumb {
             width: 12px;
             height: 12px;
@@ -189,7 +187,13 @@
             border: none;
         }
 
-        /* 响应式调整：屏幕宽度小于768px时优化显示 */
+        /* 修复：本地音乐选择按钮 - 确保点击区域完整 */
+        #selectMusicBtn {
+            z-index: 10;
+            position: relative;
+        }
+
+        /* 响应式调整 */
         @media (max-width: 768px) {
             .music-player {
                 width: 240px;
@@ -252,17 +256,21 @@
             <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.01" value="0.7">
         </div>
 
-        <!-- 本地音乐选择按钮（隐藏input，通过按钮触发） -->
-        <input type="file" id="musicFile" accept="audio/*" style="display: none;">
-        <button class="control-btn" id="selectMusicBtn" title="选择本地音乐">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 5V19"/>
-                <path d="M5 12H19"/>
-            </svg>
-        </button>
+        <!-- 本地音乐选择区域（优化触发逻辑） -->
+        <div style="position: relative;">
+            <!-- 显式按钮：确保点击区域可见且可交互 -->
+            <button class="control-btn" id="selectMusicBtn" title="选择本地音乐" style="z-index: 2;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5V19"/>
+                    <path d="M5 12H19"/>
+                </svg>
+            </button>
+            <!-- 文件选择框：覆盖在按钮上，确保点击时触发 -->
+            <input type="file" id="musicFile" accept="audio/*" multiple style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 1;">
+        </div>
     </div>
 
-    <!-- 音乐播放核心逻辑 -->
+    <!-- 音乐播放核心逻辑（修复选择音乐触发问题） -->
     <script>
         // 获取DOM元素
         const playBtn = document.getElementById('playBtn');
@@ -278,138 +286,164 @@
 
         // 初始化音频对象
         let audio = new Audio();
-        // 存储本地选择的音乐列表
         let musicList = [];
-        // 当前播放索引
         let currentIndex = 0;
-        // 是否静音状态
         let isMuted = false;
 
-        // 1. 选择本地音乐逻辑
-        selectMusicBtn.addEventListener('click', () => {
-            musicFile.click(); // 触发文件选择框
+        // 【核心修复1】双重触发：按钮点击+文件框直接交互
+        // 1. 按钮点击触发文件选择
+        selectMusicBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // 防止事件冒泡导致失效
+            console.log('选择音乐按钮被点击'); // 调试用：确认点击事件触发
+            musicFile.click();
         });
 
-        // 选择音乐文件后处理
+        // 2. 文件选择框直接变化时处理（兼容不同浏览器触发方式）
         musicFile.addEventListener('change', (e) => {
+            e.stopPropagation();
             const files = e.target.files;
-            if (files.length === 0) return;
-
-            // 将选择的音乐添加到列表
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                // 过滤非音频文件（双重保险，因accept已限制）
-                if (file.type.startsWith('audio/')) {
-                    musicList.push(file);
-                }
+            
+            // 【核心修复2】增加文件选择判断与提示
+            if (!files || files.length === 0) {
+                console.log('未选择任何文件');
+                alert('未选择任何音频文件，请重新选择');
+                return;
             }
 
-            // 如果是第一次选择音乐，自动加载第一首
-            if (musicList.length === files.length) {
+            // 过滤非音频文件（增强兼容性）
+            const validAudios = Array.from(files).filter(file => {
+                const isAudio = file.type.startsWith('audio/') || 
+                                ['mp3', 'wav', 'flac', 'ogg', 'm4a'].includes(file.name.split('.').pop().toLowerCase());
+                if (!isAudio) {
+                    alert(`"${file.name}" 不是支持的音频文件，已过滤`);
+                }
+                return isAudio;
+            });
+
+            if (validAudios.length === 0) {
+                alert('所选文件中无有效音频文件，请选择MP3、WAV、FLAC等格式');
+                return;
+            }
+
+            // 添加到音乐列表
+            musicList = [...musicList, ...validAudios];
+            console.log(`已添加 ${validAudios.length} 首音乐，总列表：${musicList.length} 首`);
+
+            // 首次选择时自动加载
+            if (musicList.length === validAudios.length) {
                 currentIndex = 0;
                 loadMusic(musicList[currentIndex]);
             }
 
-            // 重置文件选择框（允许重复选择同一文件）
+            // 【核心修复3】重置文件框（允许重复选择同一文件）
             musicFile.value = '';
         });
 
-        // 2. 加载音乐函数
+        // 加载音乐函数（增加错误处理）
         function loadMusic(musicFile) {
-            // 创建本地音乐的临时URL
-            const musicUrl = URL.createObjectURL(musicFile);
-            // 设置音频源
-            audio.src = musicUrl;
-            // 更新音乐标题（去除文件扩展名）
-            const fileName = musicFile.name.replace(/\.[^/.]+$/, "");
-            musicTitle.textContent = fileName;
-            // 加载音频（准备播放）
-            audio.load();
-            // 自动播放（可选，可注释改为手动点击播放）
-            audio.play();
-            // 更新播放按钮图标
-            updatePlayBtnIcon();
+            try {
+                // 释放之前的临时URL（避免内存泄漏）
+                if (audio.src) {
+                    URL.revokeObjectURL(audio.src);
+                }
+
+                const musicUrl = URL.createObjectURL(musicFile);
+                audio.src = musicUrl;
+                const fileName = musicFile.name.replace(/\.[^/.]+$/, "");
+                musicTitle.textContent = fileName;
+
+                // 【核心修复4】加载错误监听
+                audio.onerror = function() {
+                    alert(`加载音乐 "${fileName}" 失败，请检查文件是否损坏或格式不支持`);
+                    console.error('音频加载错误：', audio.error);
+                };
+
+                audio.load();
+                // 尝试自动播放（处理浏览器自动播放策略）
+                audio.play().then(() => {
+                    updatePlayBtnIcon();
+                }).catch(err => {
+                    // 自动播放被浏览器阻止时提示手动播放
+                    alert(`音乐 "${fileName}" 已加载，请点击播放按钮开始播放`);
+                    updatePlayBtnIcon();
+                    console.warn('自动播放被阻止：', err);
+                });
+            } catch (err) {
+                alert('加载音乐时发生错误，请重试');
+                console.error('加载音乐异常：', err);
+            }
         }
 
-        // 3. 播放/暂停控制
+        // 播放/暂停控制（保留原有逻辑）
         playBtn.addEventListener('click', () => {
             if (musicList.length === 0) {
-                // 未选择音乐时提示
                 alert('请先选择本地音乐文件');
                 return;
             }
 
             if (audio.paused) {
-                audio.play();
+                audio.play().catch(err => {
+                    alert('播放失败，请检查浏览器音频权限');
+                    console.error('播放错误：', err);
+                });
             } else {
                 audio.pause();
             }
             updatePlayBtnIcon();
         });
 
-        // 更新播放按钮图标（播放/暂停切换）
+        // 更新播放按钮图标
         function updatePlayBtnIcon() {
             const svg = playBtn.querySelector('svg');
             if (audio.paused) {
-                // 暂停状态 → 显示播放图标
                 svg.innerHTML = '<path d="M8 5V19L19 12L8 5Z"></path>';
             } else {
-                // 播放状态 → 显示暂停图标
                 svg.innerHTML = '<path d="M6 4H10V20H6V4Z"></path><path d="M14 4H18V20H14V4Z"></path>';
             }
         }
 
-        // 4. 进度条控制
-        // 点击进度条跳转播放位置
+        // 进度条控制（保留原有逻辑）
         progressContainer.addEventListener('click', (e) => {
+            if (isNaN(audio.duration)) return; // 音频未加载完成时不执行
             const progressWidth = progressContainer.clientWidth;
             const clickX = e.offsetX;
-            // 计算跳转比例
             const jumpRatio = clickX / progressWidth;
-            // 设置音频播放位置
             audio.currentTime = jumpRatio * audio.duration;
         });
 
-        // 实时更新进度条
         audio.addEventListener('timeupdate', () => {
+            if (isNaN(audio.duration)) return;
             const progressRatio = audio.currentTime / audio.duration;
             progressBar.style.width = `${progressRatio * 100}%`;
         });
 
-        // 5. 音量控制
-        // 音量滑块调整
+        // 音量控制（保留原有逻辑）
         volumeSlider.addEventListener('input', () => {
             audio.volume = volumeSlider.value;
-            // 如果之前是静音，调整音量后取消静音
             if (isMuted) {
                 isMuted = false;
                 updateVolumeBtnIcon();
             }
         });
 
-        // 静音/取消静音切换
         volumeBtn.addEventListener('click', () => {
             isMuted = !isMuted;
             audio.muted = isMuted;
             updateVolumeBtnIcon();
         });
 
-        // 更新音量按钮图标（静音/正常切换）
         function updateVolumeBtnIcon() {
             const svg = volumeBtn.querySelector('svg');
             if (isMuted || audio.volume === 0) {
-                // 静音状态 → 显示静音图标
                 svg.innerHTML = '<path d="M16.5 12C16.5 10.2386 15.5614 8.63604 14 7.93701L16.5 3H7L10.5 7.93701C9.00585 8.69107 8.0043 10.3016 8.0043 12C8.0043 13.6984 9.00585 15.3089 10.5 16.063L7 21H16.5L13 16.063C14.5614 15.364 15.5 13.7614 15.5 12H16.5ZM19.07 4.93C20.9447 6.80528 22 9.34884 22 12C22 14.6512 20.9447 17.1947 19.07 19.07"></path>';
             } else if (audio.volume < 0.5) {
-                // 低音量 → 显示低音量图标
                 svg.innerHTML = '<path d="M18.5 10.5L17.5 11.5L14 8V16L17.5 12.5L18.5 13.5L22 10L18.5 6.5L17.5 7.5L18.5 8.5V10.5ZM11 5L6 9H2V15H6L11 19V5Z"></path>';
             } else {
-                // 正常音量 → 显示正常音量图标
                 svg.innerHTML = '<path d="M11 5L6 9H2V15H6L11 19V5Z"></path><path d="M15.54 8.46C16.4774 9.39764 17.004 10.6631 17.004 11.96C17.004 13.2569 16.4774 14.5224 15.54 15.46"></path><path d="M19.07 4.93C20.9447 6.80528 22 9.34884 22 12C22 14.6512 20.9447 17.1947 19.07 19.07"></path>';
             }
         }
 
-        // 6. 上一曲/下一曲控制
+        // 上一曲/下一曲控制（保留原有逻辑）
         prevBtn.addEventListener('click', () => {
             if (musicList.length === 0) return;
             currentIndex = (currentIndex - 1 + musicList.length) % musicList.length;
@@ -422,18 +456,25 @@
             loadMusic(musicList[currentIndex]);
         });
 
-        // 7. 音频播放结束自动下一曲
+        // 播放结束自动下一曲（保留原有逻辑）
         audio.addEventListener('ended', () => {
             currentIndex = (currentIndex + 1) % musicList.length;
             loadMusic(musicList[currentIndex]);
         });
 
-        // 8. 释放临时URL（避免内存泄漏）
+        // 释放资源（保留原有逻辑）
         window.addEventListener('beforeunload', () => {
-            URL.revokeObjectURL(audio.src);
+            if (audio.src) {
+                URL.revokeObjectURL(audio.src);
+            }
+        });
+
+        // 初始化提示：告知用户如何操作
+        window.addEventListener('load', () => {
+            console.log('音乐播放器已加载完成，点击右侧"+"按钮选择本地音乐');
         });
     </script>
-<link rel="modulepreload" href="chunk-MTCCEC4A.js"><link rel="modulepreload" href="chunk-AA43FBP5.js"><link rel="modulepreload" href="chunk-QSQILVC7.js"><link rel="modulepreload" href="chunk-LT5XJCCQ.js"><link rel="modulepreload" href="chunk-IVLSLV3C.js"><link rel="modulepreload" href="chunk-5J2EOIL2.js"><link rel="modulepreload" href="chunk-U2KF4PE4.js"><link rel="modulepreload" href="chunk-V4DXNN65.js"><link rel="modulepreload" href="chunk-KWA47BSW.js"><link rel="modulepreload" href="chunk-Z4PXZORD.js"><script src="polyfills-HGDOEU5L.js" type="module"></script><script src="main-QPVVWZPR.js" type="module"></script></body>
+<link rel="modulepreload" href="chunk-J5EYK6MN.js"><link rel="modulepreload" href="chunk-XHAAVU7Y.js"><link rel="modulepreload" href="chunk-EEMWLLNO.js"><link rel="modulepreload" href="chunk-4K3FF6WK.js"><link rel="modulepreload" href="chunk-4WBL4Z6Z.js"><link rel="modulepreload" href="chunk-MEEUTLM3.js"><link rel="modulepreload" href="chunk-3CQLLMGU.js"><link rel="modulepreload" href="chunk-EATP4FK5.js"><link rel="modulepreload" href="chunk-Z2VOW2MR.js"><link rel="modulepreload" href="chunk-PBGHK5AY.js"><script src="polyfills-HGDOEU5L.js" type="module"></script><script src="main-K3BJG2QL.js" type="module"></script></body>
 </html><!-- nav.headerContent-end -->
     <!-- nav.const-start -->
     <!-- nav.const-end -->
@@ -629,7 +670,7 @@
 </html><!-- nav.loading-end -->
     </app-xiejiahe>
     <!-- nav.seo-start -->
-<div data-url="https://github.com/xjh22222228/nav" data-server-time="1756174491240" data-a="x.i.e-jiahe" data-date="2025-08-26 10:14:51" id="META-NAV" style="z-index:-1;position:fixed;top:-10000vh;left:-10000vh;">
+<div data-url="https://github.com/xjh22222228/nav" data-server-time="1756174760965" data-a="x.i.e-jiahe" data-date="2025-08-26 10:19:20" id="META-NAV" style="z-index:-1;position:fixed;top:-10000vh;left:-10000vh;">
 <div>我的主页</div><div>资源详情</div><div>百度一下，你就知道</div><p>全球领先的中文搜索引擎、致力于让网民更便捷地获取信息，找到所求。百度超过千亿的中文网页数据库，可以瞬间找到相关的搜索结果。</p><div>华语流行乐坛歌手精选1264首经典歌曲无损音质合集</div><p>华语流行乐坛歌手精选1264首经典歌曲无损音质合集。</p><div>U盘车载专用 3068 首 24G</div><p>U盘车载专用 3068 首 24G。</p><div>电影/电视剧网站</div><p>电影 /电视剧网站，追剧神器！</p><div>家里家外（79集）王道铁&孙艺燃</div><p>家里家外（79集）王道铁&孙艺燃。</p><div>奥特曼动画13部合集</div><p>奥特曼动画13部合集！</p><div>11部4K原盘收藏级纪录片【205GB】</div><p>11部4K原盘收藏级纪录片【205GB】。</p><div>13部神级纪录片</div><p>13部神级纪录片。</p><div>爱情公寓 5季全 4K +番外篇+大电影</div><p>爱情公寓 5季全 4K +番外篇+大电影。</p><div>南来北往</div><p>电视剧南来北往全集。</p><div>破产姐妹</div><p>破产姐妹全季-全集。</p><div>86版西游记4K</div><p>86版西游记4K-全集。</p><div>成龙电影（合集）</div><p>成龙电影（合集）</p><div>第97届奥斯卡金像奖《阿诺拉》磁力链接</div><p>第97届奥斯卡金像奖《阿诺拉》磁力链接：！</p><div>2024年度全世界电影榜单</div><p>2024年度全世界电影榜单！</p><div>40天学会粤语</div><p>40天学会粤语 从零基础到进阶开口说粤语！（广州话+香港话），夸克网盘资源下载。</p><div>100多道菜，实用教学让你从小白变大厨</div><p>100多道菜，实用教学让你从小白变大厨，夸克网盘资源下载。</p><div>美食实体店配方专题，价值上万！</div><p>美食实体店配方专题 价值上万，包括各种流行的菜式制作配方，夸克网盘资源下载。</p><div>20节零基础学美声系统课程</div><p>徐长信的《20 节零基础学美声系统课程》是一门专为初学者设计的声乐课程，旨在帮助学习者从零开始系统地学习美声唱法。</p><div>镜头口播课程</div><p>镜头口播课程2.0，三大掌握核心方法，内容情绪化等一系列口播教学，眼神训练、表达力、表现力、拍摄技巧、手势训练、提词器以及即兴表达，夸克网盘资源下载。</p><div>韩国语精讲：0基础到精通教程</div><p>韩国语精讲：0基础到精通教程。</p><div>吉他系统教程 小白到大神</div><p>“吉他系统教程从小白到大神”是一门全面的吉他学习课程。从基础的音乐理论和吉他基本功开始，逐步引导学员掌握和演奏不同风格的吉他曲目。课程内容包括和弦、技巧、音阶、音乐理论等，通过系统的讲解和实践演练，帮助学员从吉他初学者逐渐成长为技艺娴熟的吉他大神。</p><div>美甲详细基础课，从基础到考证</div><p>美甲详细基础课，从基础到考证，包含基础美申工具详细介绍、基础甲片修申形、电片练习座实操系列、模特手指练习实操系列、真人实操基础系列、真人实操重难点进阶精讲练习、考证系列课程资源等等，夸克网盘资源下载。</p><div>钢琴成人零基础速成视频课程</div><p>这个零基础速成视频适合没有任何音乐经验的学生。通过简单易懂的讲解和练习，您将学会基本的音阶、和弦和曲目演奏。从理论到实践，这个课程将帮助您在短时间内掌握钢琴技巧并享受演奏的乐趣。无需担心，只需按照视频指导学习即可！</p><div>《米卡·实占塔罗初阶课》</div><p>《米卡·实占塔罗初阶课》课程内容涵盖了塔罗牌的基本知识和实占技巧。课程从基础理论到实战操作，内容系统且全面：
 1. 塔罗牌基础知识：包括塔罗牌的历史、起源、流程、戒律、牌灵、牌的组成和重要参考元素（大牌和小阿卡纳牌），以及与占星对应的属性。
 2. 小阿卡纳与元素解读：对数字牌、元素牌、色彩牌及画面牌的详细解析。
