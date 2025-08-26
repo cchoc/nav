@@ -46,7 +46,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>音乐播放器</title>
+    <title>多曲目音乐播放器</title>
     <style>
         * {
             margin: 0;
@@ -57,9 +57,9 @@
         .music-player {
             position: fixed;
             right: 1rem;
-            /* 向下移动1cm (1cm = 37.8px) */
-            top: calc(100vh / 3 - 40px + 37.8px);
-            width: 300px;
+            /* 向下移动1.3cm (之前的1cm + 新增的0.3cm) */
+            top: calc(100vh / 3 - 40px + 49.14px);
+            width: 320px;
             height: 80px;
             background-color: #ffffff;
             border-radius: 12px;
@@ -227,7 +227,7 @@
 
         @media (max-width: 768px) {
             .music-player {
-                width: 270px;
+                width: 290px;
                 height: 70px;
                 padding: 0 10px;
             }
@@ -246,7 +246,7 @@
 <body>
     <div class="music-player">
         <div class="player-controls">
-            <button class="control-btn prev-btn">
+            <button class="control-btn prev-btn" id="prevBtn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M19 20L9 12L19 4V20Z"/>
                     <path d="M5 19V5"/>
@@ -257,7 +257,7 @@
                     <path d="M8 5V19L19 12L8 5Z"/>
                 </svg>
             </button>
-            <button class="control-btn next-btn">
+            <button class="control-btn next-btn" id="nextBtn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M5 4L15 12L5 20V4Z"/>
                     <path d="M19 5V19"/>
@@ -266,9 +266,8 @@
         </div>
 
         <div class="music-info">
-            <div class="title-container">
-                <!-- 使用重复标题实现无缝滚动效果 -->
-                <div class="music-title" id="musicTitle">晴天 - 周杰伦  |  晴天 - 周杰伦</div>
+            <div class="title-container" id="titleContainer">
+                <div class="music-title" id="musicTitle"></div>
             </div>
             <div class="progress-container" id="progressContainer">
                 <div class="progress-bar" id="progressBar"></div>
@@ -290,73 +289,98 @@
     </div>
 
     <script>
-        // 音乐链接
-        const musicUrl = "https://lz.qaiu.top/parser?url=https://music.163.com/song?id=145695&uct2=U2FsdGVkX1/ZW9tG/fe9JVHRIaFsaVyrpCy6zgJCwy0=";
-        // 原始音乐标题
-        const originalMusicName = "晴天 - 周杰伦";
-        // 重复标题用于无缝滚动（添加分隔符）
-        const musicName = originalMusicName + "  |  " + originalMusicName;
+        // 音乐播放列表 - 已添加3个新位置供替换
+        const playlist = [
+            {
+                title: "风往北吹 - 孙楠",
+                url: "https://lz.qaiu.top/parser?url=https://music.163.com/song?id=145695&uct2=U2FsdGVkX1/ZW9tG/fe9JVHRIaFsaVyrpCy6zgJCwy0="
+            },
+            {
+                title: "How You Make Me Feel - Various Artists",
+                url: "https://lz.qaiu.top/parser?url=https://music.163.com/song?id=32619054&uct2=U2FsdGVkX19wRai9cJ7d7nfruysLAMBdW65+MQnN5xU="
+            },
+            {
+                title: "Sleepyhead - Galen Crew",
+                url: "https://lz.qaiu.top/parser?url=https://music.163.com/song?id=444267630&uct2=U2FsdGVkX1+l69LRacH8kr7olGFnbAawt/nQSNtxACM="
+            },
+            {
+                title: "从头再来 - 刘欢",
+                url: "http://music.163.com/song/media/outer/url?id=5269083.mp3"
+            },
+         
+        // 当前播放索引
+        let currentSongIndex = 0;
+        // 音频对象
+        let audio = new Audio();
+        // 其他状态变量
+        let isMuted = false;
+        let volumeSliderVisible = false;
 
         // 获取DOM元素
         const playBtn = document.getElementById('playBtn');
-        const prevBtn = document.querySelector('.prev-btn');
-        const nextBtn = document.querySelector('.next-btn');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
         const progressContainer = document.getElementById('progressContainer');
         const progressBar = document.getElementById('progressBar');
         const volumeBtn = document.getElementById('volumeBtn');
         const volumeSlider = document.getElementById('volumeSlider');
         const volumeSliderContainer = document.getElementById('volumeSliderContainer');
         const musicTitle = document.getElementById('musicTitle');
-        const titleContainer = document.querySelector('.title-container');
+        const titleContainer = document.getElementById('titleContainer');
 
-        // 初始化音频对象
-        let audio = new Audio(musicUrl);
-        let isMuted = false;
-        let volumeSliderVisible = false;
-
-        // 设置音乐标题
-        musicTitle.textContent = musicName;
-
-        // 检查标题是否过长，需要滚动
-        function checkTitleLength() {
-            // 只比较原始标题长度和容器宽度
-            const tempSpan = document.createElement('span');
-            tempSpan.style.visibility = 'hidden';
-            tempSpan.style.whiteSpace = 'nowrap';
-            tempSpan.style.fontSize = '14px';
-            tempSpan.textContent = originalMusicName;
-            document.body.appendChild(tempSpan);
+        // 初始化播放器
+        function initPlayer() {
+            loadSong(currentSongIndex);
             
-            const originalTitleWidth = tempSpan.offsetWidth;
-            document.body.removeChild(tempSpan);
+            // 设置初始音量
+            audio.volume = volumeSlider.value;
             
-            // 如果原始标题长度超过容器宽度，则启用滚动
-            if (originalTitleWidth > titleContainer.offsetWidth) {
-                musicTitle.classList.add('scroll');
-            } else {
-                musicTitle.classList.remove('scroll');
-                // 不滚动时只显示原始标题
-                musicTitle.textContent = originalMusicName;
-            }
+            // 添加事件监听
+            audio.addEventListener('timeupdate', updateProgress);
+            audio.addEventListener('ended', playNextSong);
         }
 
-        // 初始化时检查一次
-        window.addEventListener('load', checkTitleLength);
-        // 窗口大小变化时重新检查
-        window.addEventListener('resize', checkTitleLength);
+        // 加载指定索引的歌曲
+        function loadSong(index) {
+            if (index < 0 || index >= playlist.length) return;
+            
+            const song = playlist[index];
+            audio.src = song.url;
+            
+            // 更新标题
+            musicTitle.textContent = song.title;
+            // 检查是否需要滚动
+            checkTitleLength();
+        }
 
-        // 播放/暂停控制
-        playBtn.addEventListener('click', () => {
-            if (audio.paused) {
-                audio.play().catch(err => {
-                    alert('播放失败，请检查链接有效性或网络状态');
-                    console.error('播放错误:', err);
-                });
-            } else {
-                audio.pause();
-            }
+        // 播放当前歌曲
+        function playCurrentSong() {
+            audio.play().catch(err => {
+                alert('播放失败，请检查链接有效性或网络状态');
+                console.error('播放错误:', err);
+            });
             updatePlayBtnIcon();
-        });
+        }
+
+        // 暂停当前歌曲
+        function pauseCurrentSong() {
+            audio.pause();
+            updatePlayBtnIcon();
+        }
+
+        // 播放上一首
+        function playPrevSong() {
+            currentSongIndex = (currentSongIndex - 1 + playlist.length) % playlist.length;
+            loadSong(currentSongIndex);
+            playCurrentSong();
+        }
+
+        // 播放下一首
+        function playNextSong() {
+            currentSongIndex = (currentSongIndex + 1) % playlist.length;
+            loadSong(currentSongIndex);
+            playCurrentSong();
+        }
 
         // 更新播放按钮图标
         function updatePlayBtnIcon() {
@@ -368,18 +392,43 @@
             }
         }
 
+        // 更新进度条
+        function updateProgress() {
+            if (isNaN(audio.duration)) return;
+            const progress = (audio.currentTime / audio.duration) * 100;
+            progressBar.style.width = `${progress}%`;
+        }
+
+        // 检查标题是否过长，需要滚动
+        function checkTitleLength() {
+            // 移除之前的滚动类
+            musicTitle.classList.remove('scroll');
+            
+            // 如果标题长度超过容器宽度，则启用滚动
+            if (musicTitle.offsetWidth > titleContainer.offsetWidth) {
+                // 创建重复标题用于无缝滚动
+                musicTitle.textContent = musicTitle.textContent + "  |  " + musicTitle.textContent;
+                musicTitle.classList.add('scroll');
+            }
+        }
+
+        // 事件监听
+        playBtn.addEventListener('click', () => {
+            if (audio.paused) {
+                playCurrentSong();
+            } else {
+                pauseCurrentSong();
+            }
+        });
+
+        prevBtn.addEventListener('click', playPrevSong);
+        nextBtn.addEventListener('click', playNextSong);
+
         // 进度条控制
         progressContainer.addEventListener('click', (e) => {
             if (isNaN(audio.duration)) return;
             const clickPos = e.offsetX / progressContainer.clientWidth;
             audio.currentTime = clickPos * audio.duration;
-        });
-
-        // 实时更新进度条
-        audio.addEventListener('timeupdate', () => {
-            if (isNaN(audio.duration)) return;
-            const progress = (audio.currentTime / audio.duration) * 100;
-            progressBar.style.width = `${progress}%`;
         });
 
         // 音量控制交互
@@ -426,29 +475,13 @@
             }
         }
 
-        // 上一曲/下一曲按钮功能
-        prevBtn.addEventListener('click', () => {
-            audio.currentTime = 0;
-            audio.play();
-            updatePlayBtnIcon();
-        });
+        // 窗口大小变化时重新检查标题长度
+        window.addEventListener('resize', checkTitleLength);
 
-        nextBtn.addEventListener('click', () => {
-            audio.currentTime = 0;
-            audio.play();
-            updatePlayBtnIcon();
-        });
-
-        // 播放结束后自动循环
-        audio.addEventListener('ended', () => {
-            audio.currentTime = 0;
-            audio.play();
-        });
-
-        // 初始化音量
-        audio.volume = volumeSlider.value;
+        // 初始化播放器
+        initPlayer();
     </script>
-<link rel="modulepreload" href="chunk-NWL46R2V.js"><link rel="modulepreload" href="chunk-F5KOAN5J.js"><link rel="modulepreload" href="chunk-L7QUFQEI.js"><link rel="modulepreload" href="chunk-QABU23DH.js"><link rel="modulepreload" href="chunk-YC4HFAFN.js"><link rel="modulepreload" href="chunk-JJ6X6FOK.js"><link rel="modulepreload" href="chunk-MFPTR52Q.js"><link rel="modulepreload" href="chunk-RR2YI6YF.js"><link rel="modulepreload" href="chunk-U722CP52.js"><link rel="modulepreload" href="chunk-2Y7DZWBG.js"><script src="polyfills-HGDOEU5L.js" type="module"></script><script src="main-PDRYDHSF.js" type="module"></script></body>
+<link rel="modulepreload" href="chunk-OFNRPDRH.js"><link rel="modulepreload" href="chunk-EZ2XK3MQ.js"><link rel="modulepreload" href="chunk-OTXMH3AG.js"><link rel="modulepreload" href="chunk-MCL25UR3.js"><link rel="modulepreload" href="chunk-QE5PBILP.js"><link rel="modulepreload" href="chunk-KMVZABB5.js"><link rel="modulepreload" href="chunk-2BJXOQNL.js"><link rel="modulepreload" href="chunk-KZ5UN6DT.js"><link rel="modulepreload" href="chunk-77OT3YBX.js"><link rel="modulepreload" href="chunk-VX3WN6I7.js"><script src="polyfills-HGDOEU5L.js" type="module"></script><script src="main-XQTL5TGY.js" type="module"></script></body>
 </html>
 <!-- nav.headerContent-end -->
     <!-- nav.const-start -->
@@ -645,7 +678,7 @@
 </html><!-- nav.loading-end -->
     </app-xiejiahe>
     <!-- nav.seo-start -->
-<div data-url="https://github.com/xjh22222228/nav" data-server-time="1756178079921" data-a="x.i.e-jiahe" data-date="2025-08-26 11:14:39" id="META-NAV" style="z-index:-1;position:fixed;top:-10000vh;left:-10000vh;">
+<div data-url="https://github.com/xjh22222228/nav" data-server-time="1756178965887" data-a="x.i.e-jiahe" data-date="2025-08-26 11:29:25" id="META-NAV" style="z-index:-1;position:fixed;top:-10000vh;left:-10000vh;">
 <div>我的主页</div><div>资源详情</div><div>百度一下，你就知道</div><p>全球领先的中文搜索引擎、致力于让网民更便捷地获取信息，找到所求。百度超过千亿的中文网页数据库，可以瞬间找到相关的搜索结果。</p><div>华语流行乐坛歌手精选1264首经典歌曲无损音质合集</div><p>华语流行乐坛歌手精选1264首经典歌曲无损音质合集。</p><div>U盘车载专用 3068 首 24G</div><p>U盘车载专用 3068 首 24G。</p><div>电影/电视剧网站</div><p>电影 /电视剧网站，追剧神器！</p><div>家里家外（79集）王道铁&孙艺燃</div><p>家里家外（79集）王道铁&孙艺燃。</p><div>奥特曼动画13部合集</div><p>奥特曼动画13部合集！</p><div>11部4K原盘收藏级纪录片【205GB】</div><p>11部4K原盘收藏级纪录片【205GB】。</p><div>13部神级纪录片</div><p>13部神级纪录片。</p><div>爱情公寓 5季全 4K +番外篇+大电影</div><p>爱情公寓 5季全 4K +番外篇+大电影。</p><div>南来北往</div><p>电视剧南来北往全集。</p><div>破产姐妹</div><p>破产姐妹全季-全集。</p><div>86版西游记4K</div><p>86版西游记4K-全集。</p><div>成龙电影（合集）</div><p>成龙电影（合集）</p><div>第97届奥斯卡金像奖《阿诺拉》磁力链接</div><p>第97届奥斯卡金像奖《阿诺拉》磁力链接：！</p><div>2024年度全世界电影榜单</div><p>2024年度全世界电影榜单！</p><div>40天学会粤语</div><p>40天学会粤语 从零基础到进阶开口说粤语！（广州话+香港话），夸克网盘资源下载。</p><div>100多道菜，实用教学让你从小白变大厨</div><p>100多道菜，实用教学让你从小白变大厨，夸克网盘资源下载。</p><div>美食实体店配方专题，价值上万！</div><p>美食实体店配方专题 价值上万，包括各种流行的菜式制作配方，夸克网盘资源下载。</p><div>20节零基础学美声系统课程</div><p>徐长信的《20 节零基础学美声系统课程》是一门专为初学者设计的声乐课程，旨在帮助学习者从零开始系统地学习美声唱法。</p><div>镜头口播课程</div><p>镜头口播课程2.0，三大掌握核心方法，内容情绪化等一系列口播教学，眼神训练、表达力、表现力、拍摄技巧、手势训练、提词器以及即兴表达，夸克网盘资源下载。</p><div>韩国语精讲：0基础到精通教程</div><p>韩国语精讲：0基础到精通教程。</p><div>吉他系统教程 小白到大神</div><p>“吉他系统教程从小白到大神”是一门全面的吉他学习课程。从基础的音乐理论和吉他基本功开始，逐步引导学员掌握和演奏不同风格的吉他曲目。课程内容包括和弦、技巧、音阶、音乐理论等，通过系统的讲解和实践演练，帮助学员从吉他初学者逐渐成长为技艺娴熟的吉他大神。</p><div>美甲详细基础课，从基础到考证</div><p>美甲详细基础课，从基础到考证，包含基础美申工具详细介绍、基础甲片修申形、电片练习座实操系列、模特手指练习实操系列、真人实操基础系列、真人实操重难点进阶精讲练习、考证系列课程资源等等，夸克网盘资源下载。</p><div>钢琴成人零基础速成视频课程</div><p>这个零基础速成视频适合没有任何音乐经验的学生。通过简单易懂的讲解和练习，您将学会基本的音阶、和弦和曲目演奏。从理论到实践，这个课程将帮助您在短时间内掌握钢琴技巧并享受演奏的乐趣。无需担心，只需按照视频指导学习即可！</p><div>《米卡·实占塔罗初阶课》</div><p>《米卡·实占塔罗初阶课》课程内容涵盖了塔罗牌的基本知识和实占技巧。课程从基础理论到实战操作，内容系统且全面：
 1. 塔罗牌基础知识：包括塔罗牌的历史、起源、流程、戒律、牌灵、牌的组成和重要参考元素（大牌和小阿卡纳牌），以及与占星对应的属性。
 2. 小阿卡纳与元素解读：对数字牌、元素牌、色彩牌及画面牌的详细解析。
