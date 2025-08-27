@@ -41,23 +41,21 @@
   <link rel="icon" href="https://gcore.jsdelivr.net/gh/cchoc/nav_img@main/1755829655821.png">
   <link rel="apple-touch-icon" href="https://gcore.jsdelivr.net/gh/cchoc/nav_img@main/1755829655821.png">
   <link rel="prefetch" href="//gcore.jsdelivr.net/npm/ng-zorro-antd@20.1.0/ng-zorro-antd.dark.min.css" as="style"><link rel="prefetch" href="https://gcore.jsdelivr.net/gh/cchoc/nav_img@main/1756108493237.png" as="image"><!-- nav.config-end -->
-    <!-- nav.headerContent-start --> <div class="music-player" style="
-    /* 核心：使用绝对定位但相对于最近定位祖先，不影响页面尺寸 */
+    <!-- nav.headerContent-start --><div class="music-player" style="
     position: absolute;
     width: 340px;
     height: 80px;
     margin: 0 !important;
     padding: 0 14px;
-    background-color: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    /* 关键修改：背景与网页一致，去除阴影 */
+    background-color: transparent;
+    box-shadow: none;
     display: flex;
     align-items: center;
     border: none;
-    /* 定位到右上角三分之一处 */
+    /* 位置保持不变 */
     right: 20px;
-    top: 35%;
-    /* 关键：不触发页面滚动，不改变页面尺寸 */
+    top: 34%;
     z-index: 999;
     overflow: visible;
 ">
@@ -121,7 +119,7 @@
         <div style="overflow: hidden; position: relative; height: 18px;">
             <div id="musicTitle" style="
                 font-size: 14px;
-                color: #333;
+                color: inherit; /* 继承页面文字颜色 */
                 white-space: nowrap;
                 position: absolute;
                 margin: 0;
@@ -130,7 +128,7 @@
         <div id="progressContainer" style="
             width: 100%;
             height: 4px;
-            background-color: #e0e0e0;
+            background-color: rgba(0,0,0,0.1); /* 淡色背景，不突兀 */
             border-radius: 2px;
             cursor: pointer;
             margin-top: 8px;
@@ -151,7 +149,7 @@
             border: none;
             background: transparent;
             cursor: pointer;
-            color: #666;
+            color: inherit; /* 继承页面文字颜色 */
             width: 28px;
             height: 28px;
             display: flex;
@@ -169,7 +167,7 @@
             position: absolute;
             left: 50%;
             top: -70px;
-            background-color: white;
+            background-color: white; /* 音量滑块保持白色背景便于操作 */
             padding: 8px;
             border-radius: 6px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -191,14 +189,14 @@
 </div>
 
 <script>
-// 播放器核心逻辑 - 无任何影响页面尺寸的代码
+// 播放器核心逻辑
 (function() {
     // 播放列表
-  const playlist = [
-        { title: "风往北吹 - 孙楠", url: "https://lz.qaiu.top/parser?url=https://music.163.com/song?id=145695&uct2=U2FsdGVkX18qcE0EQOymy92YFKM1lkXt9VtiexgZw3s=.mp3" },
+    const playlist = [
+        { title: "风往北吹 - 孙楠", url: "https://music.163.com/song/media/outer/url?id=145695.mp3" },
         { title: "从头再来 - 刘欢", url: "https://music.163.com/song/media/outer/url?id=5269083.mp3" },
-        { title: "How You Make Me Feel - Various Artists", url: "https://lz.qaiu.top/parser?url=https://music.163.com/song?id=32619054&uct2=U2FsdGVkX19wRai9cJ7d7nfruysLAMBdW65+MQnN5xU=" },
-        { title: "Sleepyhead - Galen Crew", url: "https://lz.qaiu.top/parser?url=https://music.163.com/song?id=444267630&uct2=U2FsdGVkX1+l69LRacH8kr7olGFnbAawt/nQSNtxACM=" }
+        { title: "Sleepyhead - Galen Crew", url: "https://music.163.com/song/media/outer/url?id=444267630.mp3" },
+        { title: "海阔天空 - Beyond", url: "https://music.163.com/song/media/outer/url?id=369796.mp3" }
     ];
 
     // 获取DOM元素
@@ -225,7 +223,6 @@
         loadSong(currentIndex);
         setupEventListeners();
         audio.volume = 0.7;
-        // 确保播放器不会导致页面出现滚动条
         preventScrollbar();
     }
 
@@ -235,12 +232,10 @@
         const windowWidth = window.innerWidth;
         const windowHeight = window.innerHeight;
         
-        // 如果播放器超出视窗右侧，调整位置
         if (playerRect.right > windowWidth) {
             elements.player.style.right = '10px';
         }
         
-        // 如果播放器超出视窗底部，调整位置
         if (playerRect.bottom > windowHeight) {
             elements.player.style.top = 'auto';
             elements.player.style.bottom = '20px';
@@ -255,7 +250,7 @@
         checkTitleScroll();
     }
 
-    // 设置事件监听（仅处理播放器功能）
+    // 设置事件监听
     function setupEventListeners() {
         elements.playBtn.addEventListener('click', togglePlay);
         elements.prevBtn.addEventListener('click', () => {
@@ -296,8 +291,6 @@
         document.addEventListener('click', () => {
             elements.volumeSliderContainer.style.display = 'none';
         });
-        
-        // 窗口大小变化时确保不出现滚动条
         window.addEventListener('resize', preventScrollbar);
     }
 
@@ -549,11 +542,11 @@
             }
         })();
     </script>
-<link rel="modulepreload" href="chunk-DKLAU4CK.js"><link rel="modulepreload" href="chunk-SIJWOFQC.js"><link rel="modulepreload" href="chunk-WKKG2WQD.js"><link rel="modulepreload" href="chunk-EQ66NMRU.js"><link rel="modulepreload" href="chunk-5XRLOPOU.js"><link rel="modulepreload" href="chunk-3VU7F3Y4.js"><link rel="modulepreload" href="chunk-R5X3H7BO.js"><link rel="modulepreload" href="chunk-VGRTLOB2.js"><link rel="modulepreload" href="chunk-7JXEQS2N.js"><link rel="modulepreload" href="chunk-E2STFS5O.js"><script src="polyfills-HGDOEU5L.js" type="module"></script><script src="main-OJKDGY2D.js" type="module"></script></body>
+<link rel="modulepreload" href="chunk-3H4W5HCD.js"><link rel="modulepreload" href="chunk-FTE6HGAN.js"><link rel="modulepreload" href="chunk-E7ETYNU3.js"><link rel="modulepreload" href="chunk-32UIRNYZ.js"><link rel="modulepreload" href="chunk-TA4GJ4RQ.js"><link rel="modulepreload" href="chunk-KYOJD6LA.js"><link rel="modulepreload" href="chunk-I5XJ7QZ7.js"><link rel="modulepreload" href="chunk-FSPRN2XL.js"><link rel="modulepreload" href="chunk-TVXOSFXF.js"><link rel="modulepreload" href="chunk-MUZNOOLF.js"><script src="polyfills-HGDOEU5L.js" type="module"></script><script src="main-XYCDNCSP.js" type="module"></script></body>
 </html><!-- nav.loading-end -->
     </app-xiejiahe>
     <!-- nav.seo-start -->
-<div data-url="https://github.com/xjh22222228/nav" data-server-time="1756261108313" data-a="x.i.e-jiahe" data-date="2025-08-27 10:18:28" id="META-NAV" style="z-index:-1;position:fixed;top:-10000vh;left:-10000vh;">
+<div data-url="https://github.com/xjh22222228/nav" data-server-time="1756263674295" data-a="x.i.e-jiahe" data-date="2025-08-27 11:01:14" id="META-NAV" style="z-index:-1;position:fixed;top:-10000vh;left:-10000vh;">
 <div>我的主页</div><div>资源详情</div><div>百度一下，你就知道</div><p>全球领先的中文搜索引擎、致力于让网民更便捷地获取信息，找到所求。百度超过千亿的中文网页数据库，可以瞬间找到相关的搜索结果。</p><div>华语流行乐坛歌手精选1264首经典歌曲无损音质合集</div><p>华语流行乐坛歌手精选1264首经典歌曲无损音质合集。</p><div>U盘车载专用 3068 首 24G</div><p>U盘车载专用 3068 首 24G。</p><div>电影/电视剧网站</div><p>电影 /电视剧网站，追剧神器！</p><div>家里家外（79集）王道铁&孙艺燃</div><p>家里家外（79集）王道铁&孙艺燃。</p><div>奥特曼动画13部合集</div><p>奥特曼动画13部合集！</p><div>11部4K原盘收藏级纪录片【205GB】</div><p>11部4K原盘收藏级纪录片【205GB】。</p><div>13部神级纪录片</div><p>13部神级纪录片。</p><div>爱情公寓 5季全 4K +番外篇+大电影</div><p>爱情公寓 5季全 4K +番外篇+大电影。</p><div>南来北往</div><p>电视剧南来北往全集。</p><div>破产姐妹</div><p>破产姐妹全季-全集。</p><div>86版西游记4K</div><p>86版西游记4K-全集。</p><div>成龙电影（合集）</div><p>成龙电影（合集）</p><div>第97届奥斯卡金像奖《阿诺拉》磁力链接</div><p>第97届奥斯卡金像奖《阿诺拉》磁力链接：！</p><div>2024年度全世界电影榜单</div><p>2024年度全世界电影榜单！</p><div>40天学会粤语</div><p>40天学会粤语 从零基础到进阶开口说粤语！（广州话+香港话），夸克网盘资源下载。</p><div>100多道菜，实用教学让你从小白变大厨</div><p>100多道菜，实用教学让你从小白变大厨，夸克网盘资源下载。</p><div>美食实体店配方专题，价值上万！</div><p>美食实体店配方专题 价值上万，包括各种流行的菜式制作配方，夸克网盘资源下载。</p><div>20节零基础学美声系统课程</div><p>徐长信的《20 节零基础学美声系统课程》是一门专为初学者设计的声乐课程，旨在帮助学习者从零开始系统地学习美声唱法。</p><div>镜头口播课程</div><p>镜头口播课程2.0，三大掌握核心方法，内容情绪化等一系列口播教学，眼神训练、表达力、表现力、拍摄技巧、手势训练、提词器以及即兴表达，夸克网盘资源下载。</p><div>韩国语精讲：0基础到精通教程</div><p>韩国语精讲：0基础到精通教程。</p><div>吉他系统教程 小白到大神</div><p>“吉他系统教程从小白到大神”是一门全面的吉他学习课程。从基础的音乐理论和吉他基本功开始，逐步引导学员掌握和演奏不同风格的吉他曲目。课程内容包括和弦、技巧、音阶、音乐理论等，通过系统的讲解和实践演练，帮助学员从吉他初学者逐渐成长为技艺娴熟的吉他大神。</p><div>美甲详细基础课，从基础到考证</div><p>美甲详细基础课，从基础到考证，包含基础美申工具详细介绍、基础甲片修申形、电片练习座实操系列、模特手指练习实操系列、真人实操基础系列、真人实操重难点进阶精讲练习、考证系列课程资源等等，夸克网盘资源下载。</p><div>钢琴成人零基础速成视频课程</div><p>这个零基础速成视频适合没有任何音乐经验的学生。通过简单易懂的讲解和练习，您将学会基本的音阶、和弦和曲目演奏。从理论到实践，这个课程将帮助您在短时间内掌握钢琴技巧并享受演奏的乐趣。无需担心，只需按照视频指导学习即可！</p><div>《米卡·实占塔罗初阶课》</div><p>《米卡·实占塔罗初阶课》课程内容涵盖了塔罗牌的基本知识和实占技巧。课程从基础理论到实战操作，内容系统且全面：
 1. 塔罗牌基础知识：包括塔罗牌的历史、起源、流程、戒律、牌灵、牌的组成和重要参考元素（大牌和小阿卡纳牌），以及与占星对应的属性。
 2. 小阿卡纳与元素解读：对数字牌、元素牌、色彩牌及画面牌的详细解析。
