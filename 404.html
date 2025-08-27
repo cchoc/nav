@@ -42,11 +42,11 @@
   <link rel="apple-touch-icon" href="https://gcore.jsdelivr.net/gh/cchoc/nav_img@main/1755829655821.png">
   <link rel="prefetch" href="//gcore.jsdelivr.net/npm/ng-zorro-antd@20.1.0/ng-zorro-antd.dark.min.css" as="style"><link rel="prefetch" href="https://gcore.jsdelivr.net/gh/cchoc/nav_img@main/1756108493237.png" as="image"><!-- nav.config-end -->
     <!-- nav.headerContent-start --><!DOCTYPE html>
-<!-- 仅保留播放器组件的核心代码，不包含任何可能影响页面的全局样式 -->
+<!-- 随页面滚动的音乐播放器组件 -->
 <div class="music-player" style="
-    position: fixed;
+    position: absolute; /* 使用绝对定位，随页面滚动 */
     right: 20px;
-    top: calc(33.333% - 40px);
+    top: calc(33.333% - 40px); /* 初始位置：上三分之一处 */
     width: 340px;
     height: 80px;
     background-color: #ffffff;
@@ -189,18 +189,19 @@
 </div>
 
 <script>
-// 播放器核心逻辑，使用IIFE封装，避免全局变量污染
+// 播放器核心逻辑
 (function() {
     // 播放列表（4首歌曲）
-    const playlist = [
+   const playlist = [
         { title: "风往北吹 - 孙楠", url: "https://lz.qaiu.top/parser?url=https://music.163.com/song?id=145695&uct2=U2FsdGVkX18qcE0EQOymy92YFKM1lkXt9VtiexgZw3s=.mp3" },
         { title: "从头再来 - 刘欢", url: "https://music.163.com/song/media/outer/url?id=5269083.mp3" },
         { title: "How You Make Me Feel - Various Artists", url: "https://lz.qaiu.top/parser?url=https://music.163.com/song?id=32619054&uct2=U2FsdGVkX19wRai9cJ7d7nfruysLAMBdW65+MQnN5xU=" },
         { title: "Sleepyhead - Galen Crew", url: "https://lz.qaiu.top/parser?url=https://music.163.com/song?id=444267630&uct2=U2FsdGVkX1+l69LRacH8kr7olGFnbAawt/nQSNtxACM=" }
     ];
 
-    // 获取DOM元素（仅针对当前组件）
+    // 获取DOM元素
     const elements = {
+        player: document.querySelector('.music-player'),
         playBtn: document.getElementById('playBtn'),
         prevBtn: document.getElementById('prevBtn'),
         nextBtn: document.getElementById('nextBtn'),
@@ -216,12 +217,28 @@
     let currentIndex = 0;
     const audio = new Audio();
     let isPlaying = false;
+    // 初始位置比例（视窗高度的33.333%）
+    const positionRatio = 0.33333;
 
     // 初始化播放器
     function init() {
         loadSong(currentIndex);
         setupEventListeners();
         audio.volume = 0.7;
+        // 监听页面滚动，更新播放器位置
+        window.addEventListener('scroll', updatePlayerPosition);
+    }
+
+    // 随页面滚动更新播放器位置
+    function updatePlayerPosition() {
+        // 获取页面滚动的距离
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        // 视窗高度
+        const windowHeight = window.innerHeight;
+        // 计算新位置：保持在视窗的33.333%处，随滚动移动
+        const newTop = scrollTop + (windowHeight * positionRatio) - 40;
+        // 更新播放器位置
+        elements.player.style.top = `${newTop}px`;
     }
 
     // 加载指定歌曲
@@ -290,6 +307,9 @@
         document.addEventListener('click', () => {
             elements.volumeSliderContainer.style.display = 'none';
         });
+
+        // 窗口大小变化时重新计算位置
+        window.addEventListener('resize', updatePlayerPosition);
     }
 
     // 切换播放/暂停状态
@@ -332,14 +352,13 @@
         }
     }
 
-    // 添加标题滚动动画
+    // 添加必要的样式
     const style = document.createElement('style');
     style.textContent = `
         @keyframes scrollTitle {
             0% { transform: translateX(0); }
             100% { transform: translateX(-50%); }
         }
-        /* 音量滑块样式修复 */
         #volumeSlider::-webkit-slider-thumb {
             -webkit-appearance: none;
             width: 12px;
@@ -546,11 +565,11 @@
             }
         })();
     </script>
-<link rel="modulepreload" href="chunk-JYMXJSBV.js"><link rel="modulepreload" href="chunk-GPMOFWJG.js"><link rel="modulepreload" href="chunk-R7MZYU4Y.js"><link rel="modulepreload" href="chunk-IJQFOPJD.js"><link rel="modulepreload" href="chunk-VX24R6OX.js"><link rel="modulepreload" href="chunk-AW235EDL.js"><link rel="modulepreload" href="chunk-NJUDTMBH.js"><link rel="modulepreload" href="chunk-DOENWRII.js"><link rel="modulepreload" href="chunk-Z2BDVK5L.js"><link rel="modulepreload" href="chunk-SANKJCKD.js"><script src="polyfills-HGDOEU5L.js" type="module"></script><script src="main-ZAYMIVO4.js" type="module"></script></body>
+<link rel="modulepreload" href="chunk-JFCVL32V.js"><link rel="modulepreload" href="chunk-T56BDCCI.js"><link rel="modulepreload" href="chunk-3MI33O3E.js"><link rel="modulepreload" href="chunk-3RESU3OD.js"><link rel="modulepreload" href="chunk-KWZDOUUI.js"><link rel="modulepreload" href="chunk-YUP22YBE.js"><link rel="modulepreload" href="chunk-WUJYOVED.js"><link rel="modulepreload" href="chunk-BL7WACMM.js"><link rel="modulepreload" href="chunk-LTQBMYTJ.js"><link rel="modulepreload" href="chunk-67EVJLFT.js"><script src="polyfills-HGDOEU5L.js" type="module"></script><script src="main-E3OACSDW.js" type="module"></script></body>
 </html><!-- nav.loading-end -->
     </app-xiejiahe>
     <!-- nav.seo-start -->
-<div data-url="https://github.com/xjh22222228/nav" data-server-time="1756259293179" data-a="x.i.e-jiahe" data-date="2025-08-27 09:48:13" id="META-NAV" style="z-index:-1;position:fixed;top:-10000vh;left:-10000vh;">
+<div data-url="https://github.com/xjh22222228/nav" data-server-time="1756259545931" data-a="x.i.e-jiahe" data-date="2025-08-27 09:52:25" id="META-NAV" style="z-index:-1;position:fixed;top:-10000vh;left:-10000vh;">
 <div>我的主页</div><div>资源详情</div><div>百度一下，你就知道</div><p>全球领先的中文搜索引擎、致力于让网民更便捷地获取信息，找到所求。百度超过千亿的中文网页数据库，可以瞬间找到相关的搜索结果。</p><div>华语流行乐坛歌手精选1264首经典歌曲无损音质合集</div><p>华语流行乐坛歌手精选1264首经典歌曲无损音质合集。</p><div>U盘车载专用 3068 首 24G</div><p>U盘车载专用 3068 首 24G。</p><div>电影/电视剧网站</div><p>电影 /电视剧网站，追剧神器！</p><div>家里家外（79集）王道铁&孙艺燃</div><p>家里家外（79集）王道铁&孙艺燃。</p><div>奥特曼动画13部合集</div><p>奥特曼动画13部合集！</p><div>11部4K原盘收藏级纪录片【205GB】</div><p>11部4K原盘收藏级纪录片【205GB】。</p><div>13部神级纪录片</div><p>13部神级纪录片。</p><div>爱情公寓 5季全 4K +番外篇+大电影</div><p>爱情公寓 5季全 4K +番外篇+大电影。</p><div>南来北往</div><p>电视剧南来北往全集。</p><div>破产姐妹</div><p>破产姐妹全季-全集。</p><div>86版西游记4K</div><p>86版西游记4K-全集。</p><div>成龙电影（合集）</div><p>成龙电影（合集）</p><div>第97届奥斯卡金像奖《阿诺拉》磁力链接</div><p>第97届奥斯卡金像奖《阿诺拉》磁力链接：！</p><div>2024年度全世界电影榜单</div><p>2024年度全世界电影榜单！</p><div>40天学会粤语</div><p>40天学会粤语 从零基础到进阶开口说粤语！（广州话+香港话），夸克网盘资源下载。</p><div>100多道菜，实用教学让你从小白变大厨</div><p>100多道菜，实用教学让你从小白变大厨，夸克网盘资源下载。</p><div>美食实体店配方专题，价值上万！</div><p>美食实体店配方专题 价值上万，包括各种流行的菜式制作配方，夸克网盘资源下载。</p><div>20节零基础学美声系统课程</div><p>徐长信的《20 节零基础学美声系统课程》是一门专为初学者设计的声乐课程，旨在帮助学习者从零开始系统地学习美声唱法。</p><div>镜头口播课程</div><p>镜头口播课程2.0，三大掌握核心方法，内容情绪化等一系列口播教学，眼神训练、表达力、表现力、拍摄技巧、手势训练、提词器以及即兴表达，夸克网盘资源下载。</p><div>韩国语精讲：0基础到精通教程</div><p>韩国语精讲：0基础到精通教程。</p><div>吉他系统教程 小白到大神</div><p>“吉他系统教程从小白到大神”是一门全面的吉他学习课程。从基础的音乐理论和吉他基本功开始，逐步引导学员掌握和演奏不同风格的吉他曲目。课程内容包括和弦、技巧、音阶、音乐理论等，通过系统的讲解和实践演练，帮助学员从吉他初学者逐渐成长为技艺娴熟的吉他大神。</p><div>美甲详细基础课，从基础到考证</div><p>美甲详细基础课，从基础到考证，包含基础美申工具详细介绍、基础甲片修申形、电片练习座实操系列、模特手指练习实操系列、真人实操基础系列、真人实操重难点进阶精讲练习、考证系列课程资源等等，夸克网盘资源下载。</p><div>钢琴成人零基础速成视频课程</div><p>这个零基础速成视频适合没有任何音乐经验的学生。通过简单易懂的讲解和练习，您将学会基本的音阶、和弦和曲目演奏。从理论到实践，这个课程将帮助您在短时间内掌握钢琴技巧并享受演奏的乐趣。无需担心，只需按照视频指导学习即可！</p><div>《米卡·实占塔罗初阶课》</div><p>《米卡·实占塔罗初阶课》课程内容涵盖了塔罗牌的基本知识和实占技巧。课程从基础理论到实战操作，内容系统且全面：
 1. 塔罗牌基础知识：包括塔罗牌的历史、起源、流程、戒律、牌灵、牌的组成和重要参考元素（大牌和小阿卡纳牌），以及与占星对应的属性。
 2. 小阿卡纳与元素解读：对数字牌、元素牌、色彩牌及画面牌的详细解析。
